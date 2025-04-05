@@ -18,10 +18,11 @@ EGAC (Entropy-Guided Actor-Critic) is a modular reinforcement learning system de
 ## File Structure
 
 ```
-egac/
+EGAC-System/
 ├── egac.py          # Main module containing the EGACAgent class
-├── train.py         # Example training script using the module
-├── environments.py  # (Optional) Custom environments loader
+├── tests/
+     |--- System-Evaluation      # Example training script using the module
+     |----Compare-Algorithms.py
 └── README.md
 ```
 
