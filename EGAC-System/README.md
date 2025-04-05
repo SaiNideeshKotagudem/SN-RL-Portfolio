@@ -1,6 +1,6 @@
 # EGAC: Entropy-Guided Actor-Critic with Meta-Learning Dynamics
 
-EGAC (Entropy-Guided Actor-Critic) is a novel, modular reinforcement learning algorithm designed for adaptive, stable, and exploratory learning in continuous and discrete control environments. This repo provides a TensorFlow-based implementation with built-in prioritized experience replay, meta-gradient dynamics, reward normalization, dynamic entropy control, GAE advantage estimation, and Polyak-averaged critic targets.
+EGAC (Entropy-Guided Actor-Critic) is a modular reinforcement learning system designed for adaptive, stable, and exploratory learning in continuous and discrete control environments. This repo provides a TensorFlow-based implementation with built-in prioritized experience replay, meta-gradient dynamics, reward normalization, dynamic entropy control, GAE advantage estimation, and Polyak-averaged critic targets.
 
 ## Features
 
