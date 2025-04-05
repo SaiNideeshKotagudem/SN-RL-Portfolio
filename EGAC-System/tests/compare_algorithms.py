@@ -4,36 +4,32 @@ import matplotlib.pyplot as plt
 
 from tf_agents.environments import suite_gym, tf_py_environment
 from tf_agents.trajectories import time_step as ts
-from tf_agents.networks import actor_distribution_network, value_network
+from tf_agents.networks import actor_distribution_network, value_network, q_network
 from tf_agents.policies import py_tf_eager_policy
 from tf_agents.replay_buffers import TFUniformReplayBuffer
 from tf_agents.utils import common
 
-from EGAC import EGACAgent  # Assuming EGAC.py is in the same directory
+from egac import EGACAgent  # assuming lowercase file name 'egac.py'
 from tf_agents.agents.ppo import ppo_clip_agent
 from tf_agents.agents.sac import sac_agent
-from tf_agents.agents.dqn import dqn_agent  # Used to simulate RAC
+from tf_agents.agents.dqn import dqn_agent  # placeholder for RAC
 
 
 def create_env(env_name='LunarLander-v2'):
     env = suite_gym.load(env_name)
     return tf_py_environment.TFPyEnvironment(env)
 
+
 def train_agent(agent_type, num_iterations=5000, collect_episodes_per_iter=5):
     env = create_env()
     eval_env = create_env()
-    
+
     observation_spec = env.observation_spec()
     action_spec = env.action_spec()
     time_step_spec = env.time_step_spec()
 
     if agent_type == 'EGAC':
-        actor_net = actor_distribution_network.ActorDistributionNetwork(
-            observation_spec, action_spec, activation_fn=tf.keras.activations.relu
-        )
-        critic_net = value_network.ValueNetwork(observation_spec)
-        target_net = value_network.ValueNetwork(observation_spec)
-        agent = EGACAgent(actor_net, critic_net, target_net)
+        agent = EGACAgent(observation_spec, action_spec)
 
     elif agent_type == 'PPO':
         actor_net = actor_distribution_network.ActorDistributionNetwork(
@@ -66,8 +62,7 @@ def train_agent(agent_type, num_iterations=5000, collect_episodes_per_iter=5):
         agent.initialize()
 
     elif agent_type == 'RAC':
-        # Using DQN as placeholder for RAC
-        q_net = tf_agents.networks.q_network.QNetwork(observation_spec, action_spec)
+        q_net = q_network.QNetwork(observation_spec, action_spec)
         agent = dqn_agent.DqnAgent(
             time_step_spec,
             action_spec,
@@ -83,6 +78,7 @@ def train_agent(agent_type, num_iterations=5000, collect_episodes_per_iter=5):
     rewards = []
     for iteration in range(num_iterations):
         episode_rewards = []
+
         for _ in range(collect_episodes_per_iter):
             time_step = env.reset()
             total_reward = 0
@@ -90,36 +86,40 @@ def train_agent(agent_type, num_iterations=5000, collect_episodes_per_iter=5):
                 if agent_type == 'EGAC':
                     action_dist = agent.actor_net(time_step.observation)[0]
                     action = action_dist.sample()
+                    next_time_step = env.step(action.numpy())
+                    experience = (
+                        time_step.observation.numpy(),
+                        action.numpy(),
+                        time_step.reward.numpy(),
+                        next_time_step.observation.numpy()
+                    )
+                    agent.experience_buffer.push(experience)
+                    time_step = next_time_step
                 else:
                     action_step = agent.policy.action(time_step)
                     action = action_step.action
-                next_time_step = env.step(action)
-
-                if agent_type == 'EGAC':
-                    agent.experience_buffer.append((time_step.observation, action, time_step.reward.numpy(), next_time_step.observation))
-                    if len(agent.experience_buffer) > 1000:
-                        agent.experience_buffer.pop(0)
+                    time_step = env.step(action)
                 total_reward += time_step.reward.numpy()
-                time_step = next_time_step
             episode_rewards.append(total_reward)
 
         rewards.append(np.mean(episode_rewards))
 
         if agent_type == 'EGAC':
-            agent.reward_buffer.extend(episode_rewards)
             agent.train()
-            agent.update_entropy_coefficient()
             agent.update_target_network()
 
         if iteration % 100 == 0:
-            print(f"[{agent_type}] Iteration {iteration}: Avg Reward = {np.mean(episode_rewards)}")
+            print(f"[{agent_type}] Iteration {iteration}: Avg Reward = {np.mean(episode_rewards):.2f}")
+
     return rewards
+
 
 # Train and evaluate
 algorithms = ['EGAC', 'PPO', 'SAC', 'RAC']
 results = {}
+
 for algo in algorithms:
-    print(f"Training {algo}...")
+    print(f"\nTraining {algo}...")
     rewards = train_agent(algo, num_iterations=1000)
     results[algo] = rewards
 
@@ -133,4 +133,4 @@ plt.title("Comparison of RL Algorithms on LunarLander-v2")
 plt.legend()
 plt.grid(True)
 plt.show()
-                
+        
